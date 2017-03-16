@@ -50,7 +50,7 @@ void setup() {
     distR=400;
   //set up the communication 
   Wire.begin(8);                // join i2c bus with address #8
-  Wire.onReceive(receiveEvent); // register event
+  Wire.onRequest(requestEvent); // register event
   delay(1000);
 }
 
@@ -108,7 +108,7 @@ void checkSonar()
   Serial.println(bodyMotor.read());
 }
 
-void receiveEvent() {
+void requestEvent() {
   sendDistanceToServer();
 }
 

@@ -66,7 +66,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(Serial.available()>0)
+  /*if(Serial.available()>0)
   {
     String leggi=Serial.readString();
     if(leggi=="play")
@@ -74,7 +74,7 @@ void loop() {
     if(leggi=="stop")
       stopPlaying();
     Serial.println("PLAY");
-  }
+  }*/
   delay(100);
 }
 

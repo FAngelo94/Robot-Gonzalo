@@ -9,19 +9,13 @@
 #include <Wire.h>
 
 int distC;
-int timeRequest;
-//Servo for the rotation and its position
-#define BODY_PIN 8
-Servo bodyMotor;
-int positionBody;//save the position that body must be reach
-int realBody;//save the instant position that body has
-long bodyTime;
+long timeRequest;
 //Variable to check if a person is near for more than 2/3 seconds
 int seePerson;
 int lastDistSeePerson;
 int checkPerson;
 //Time offerFood
-int timeOffer;//count for how many time the robot is waiting the person
+long timeOffer;//count for how many time the robot is waiting the person
 
 //HAND WITH FOOD
 #define FOOD_PIN 7
@@ -104,6 +98,7 @@ void requestDist()
         distC=distC*10;
       }
     }
+    distC=distC/10;
     timeRequest=millis();
   }
 }
@@ -141,20 +136,19 @@ void offerFood()
 //MOVE FAST THE HAND IF A PERSON TRY TO KEEP FOOD
 void moveHandFast()
 {
-  //Serial.println(oldValue[0]);
-  if(foodMoveFast==false)
+  if(foodMoveFast==false && millis()-foodTime>100)
   {
-  newValue[0]=analogRead(PIN_SENSOR_1);
-  newValue[1]=analogRead(PIN_SENSOR_2);
-  newValue[2]=analogRead(PIN_SENSOR_3);
-  if(oldValue[0]-newValue[0]>1 || oldValue[1]-newValue[1]>1 || oldValue[2]-newValue[2]>1)
-  {//A person is trying to take food
-    foodMoveFast=true;
+    newValue[0]=analogRead(PIN_SENSOR_1);
+    newValue[1]=analogRead(PIN_SENSOR_2);
+    newValue[2]=analogRead(PIN_SENSOR_3);
+    if(oldValue[0]-newValue[0]>1 || oldValue[1]-newValue[1]>1 || oldValue[2]-newValue[2]>1)
+    {//A person is trying to take food
+      foodMoveFast=true;
+    }
+    oldValue[0]=newValue[0];
+    oldValue[1]=newValue[1];
+    oldValue[2]=newValue[2];
     foodTime=millis();
-  }
-  oldValue[0]=newValue[0];
-  oldValue[1]=newValue[1];
-  oldValue[2]=newValue[2];
   }
   else
   {
