@@ -29,6 +29,8 @@ double sonarTime;
 //Servo for the rotation and its position
 #define BODY_PIN 6
 Servo bodyMotor;
+//time wait before send
+long timeSend;
 
 void setup() {
   //BODY
@@ -49,13 +51,29 @@ void setup() {
   if(distR==0)
     distR=400;
   //set up the communication 
-  Wire.begin(8);                // join i2c bus with address #8
-  Wire.onRequest(requestEvent); // register event
+  Wire.begin();
+  timeSend=0;
   delay(1000);
 }
 
 void loop() {
   checkSonar();
+  if(millis()-timeSend>=500)
+  {
+    sendDistanceToServer();
+    timeSend=millis();
+  }
+  /*for(int i=0;i<100;i++)
+    {
+        bodyMotor.write(i);
+      delay(20);
+    }
+    for(int i=100;i>0;i--)
+    {
+        bodyMotor.write(i);
+      delay(20);
+    }
+  delay(5000);*/
 }
 
 //MANAGE SONAR AND ROTATION OF ROBOT
@@ -108,20 +126,45 @@ void checkSonar()
   Serial.println(bodyMotor.read());
 }
 
-void requestEvent() {
-  sendDistanceToServer();
-}
-
 void sendDistanceToServer()
 {
   /*
    * Server always wait for 3 bytes, so if distC<100 I add some
    * letters in order to have 3 bytes
    */
+  Wire.beginTransmission(8); // transmit to device #8
+  int d=distC;
+  char c;
   if(distC<10)
-    Wire.write("xx");
+  {
+    c=distC+48;
+    Wire.write('0');
+    Wire.write('0');
+    Wire.write(c);
+  }
   if(distC<100 && distC>=10)
-    Wire.write("x");
-  Wire.write(distC);
+  {
+    Wire.write('0');
+    int tmp=d/10;
+    c=tmp+48;
+    Wire.write(c);
+    tmp=d-tmp*10;
+    c=tmp+48;
+    Wire.write(c);
+    
+  }
+  if(distC>100)
+  {
+    int tmp=d/100;
+    c=tmp+48;
+    Wire.write(c);
+    tmp=(d-tmp*100)/10;
+    c=tmp+48;
+    Wire.write(c);
+    tmp=(d-tmp*10-d/100*100);
+    c=tmp+48;
+    Wire.write(c);
+  }
+  Wire.endTransmission();    // stop transmitting 
 }
 

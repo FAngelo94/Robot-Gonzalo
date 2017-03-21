@@ -37,6 +37,7 @@ int positionHelloHand;
 long helloTime;
 long hiTime;
 int helloDirection;
+boolean checkHello;
 
 //eyes
 #define GREEN 9
@@ -62,45 +63,47 @@ void setup() {
   helloTime=0;
   hiTime=0;
   helloDirection=0;
+  checkHello=false;
   //eye setup
   pinMode(GREEN, OUTPUT);  
   pinMode(BLU, OUTPUT);  
   pinMode(RED, OUTPUT);
   //communication with slave set up
+  Wire.begin(8);                // join i2c bus with address #8
+  Wire.onRequest(requestEvent); // register event
+  //setup eyes
   digitalWrite(GREEN, LOW);  
   digitalWrite(BLU, LOW);  
   digitalWrite(RED, HIGH);
   Wire.begin();
   timeRequest=0; 
-  delay(5000);
+  delay(2000);
+  helloHand.detach();
+  Serial.begin(9600);
 }
 
 void loop() {
-  requestDist();
   happy();
-  nearPerson();
-  moveHandFast();
+  Serial.println(distC);
+  //nearPerson();
+  //moveHandFast();
 }
 //request to the slave to give the distance of central sonar
-void requestDist()
-{
-  if(millis()-timeRequest>200)//ask the distance every 0.2 seconds
-  {
-    Wire.requestFrom(8, 3);// request 3 bytes from slave device #8 (max distance=400)
+void requestEvent(int howMany){
     distC=0;
+    Serial.print("Caratteri=");
     while(Wire.available())
     {
       char c=Wire.read();
-      if(c!='x')
-      {
-        int n=c-48;
-        distC=distC+n;
-        distC=distC*10;
-      }
+      Serial.print(c);
+      int n=c-48;
+      distC=distC+n;
+      distC=distC*10;
     }
     distC=distC/10;
     timeRequest=millis();
-  }
+    Serial.println();
+    Serial.println(distC);
 }
 
 //WHAT DO WHEN A PERSON IS NEAR
@@ -202,22 +205,31 @@ void sayhi()
   {
     if(helloDirection==0)
     {
-      positionHelloHand=positionHelloHand+10;
-      if(positionHelloHand>=125)
+      positionHelloHand=positionHelloHand+2;
+      if(positionHelloHand>=110)
       {
         helloDirection=1;
       }
     }
     else
     {
-      positionHelloHand=positionHelloHand-10;
-      if(positionHelloHand<=55)
+      positionHelloHand=positionHelloHand-2;
+      if(positionHelloHand<=70)
       {
         helloDirection=0;
       }
     } 
     helloTime=millis();
+    if(!helloHand.attached())
+      helloHand.attach(HELLO_PIN);
     helloHand.write(positionHelloHand);
+  }
+  else
+  {
+    if(helloHand.attached() && millis()-helloTime>=20)
+    {
+      helloHand.detach();
+    }
   }
 }
 
