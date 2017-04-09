@@ -6,7 +6,8 @@
  * Soheil Ghanbari
  */
 #include <Servo.h>
-#include <Wire.h>
+#include <DFRobotDFPlayerMini.h>7
+#include <SoftwareSerial.h>
 
 //Variable to check if a person is near for more than 2/3 seconds
 int seePerson;
@@ -41,9 +42,22 @@ int helloDirection;
 #define BLU 10
 #define RED 11
 
+//speak
+long speakTime;
+
+//face
+#define face1 13
+#define face2 12
+Servo faceS1, faceS2;
+
+//Music
+//SoftwareSerial mySoftwareSerial(10, 11); // RX, TX
+//DFRobotDFPlayerMini myDFPlayer;
+
+
 void setup() {
   //HAND WITH FOOD
-  positionFoodHand=130;
+  positionFoodHand=180;
   foodHand.attach(FOOD_PIN);
   foodHand.write(positionFoodHand); 
   foodMoveFast=false;
@@ -65,69 +79,105 @@ void setup() {
   pinMode(BLU, OUTPUT);  
   pinMode(RED, OUTPUT);
   //communication with slave set up
-  Wire.begin(8);                // join i2c bus with address #8
-  Wire.onReceive(requestEvent); // register event
   //setup eyes
   blueEye();
+  //Set up the DF Player
+  //mySoftwareSerial.begin(9600);
+  //myDFPlayer.volume(20);  //Set volume value. From 0 to 30
   delay(2000);
   helloHand.detach();
-  Serial.begin(9600);
+  foodHand.detach();
+  helloTime=millis();
+  pinMode(2, INPUT);
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
+  digitalWrite(3, LOW);
+  digitalWrite(4, LOW);
+  speakTime=0;
+  //Serial.begin(9600);
 }
 
 void loop() {
   sayhi();
-  //moveHandFast();
+  requestEvent();
+  moveHandFast();
+  if(millis()-speakTime>=500)
+  {
+    digitalWrite(3, LOW);
+    digitalWrite(4, LOW);
+  }
 }
 //request to the slave to give the distance of central sonar
-void requestEvent(int howMany){
-    Serial.print("Caratteri=");
-    if(Wire.available())
+void requestEvent(){
+    //Serial.print("Caratteri=");
+    //Serial.print(digitalRead(2));
+    if(digitalRead(2)==HIGH && millis()-helloTime>=3000)
     {
-      char c=Wire.read();
-      Serial.print(c);
-      if(c=='h')
+      //Serial.print(c);
         helloTime=millis();
+        //Serial.println("ciao");
     }
-    Serial.println();
+    //Serial.println("Hola chica");
+    //Serial.println();
 }
 
 //MOVE FAST THE HAND IF A PERSON TRY TO KEEP FOOD
 void moveHandFast()
 {
-  if(foodMoveFast==false && millis()-foodTime>100)
+  //Serial.println(foodMoveFast);
+  if(foodMoveFast==false && millis()-foodTime>=1000)
   {
     newValue[0]=analogRead(PIN_SENSOR_1);
     newValue[1]=analogRead(PIN_SENSOR_2);
     newValue[2]=analogRead(PIN_SENSOR_3);
-    if(oldValue[0]-newValue[0]>1 || oldValue[1]-newValue[1]>1 || oldValue[2]-newValue[2]>1)
+   /* Serial.print("FOTO=");
+    Serial.print(newValue[0]);
+    Serial.print("-");
+    Serial.print(newValue[1]);
+    Serial.print("-");
+    Serial.println(newValue[2]);*/
+    if(-oldValue[0]+newValue[0]>5 || -oldValue[1]+newValue[1]>5 || -oldValue[2]+newValue[2]>5)
     {//A person is trying to take food
       foodMoveFast=true;
     }
     oldValue[0]=newValue[0];
     oldValue[1]=newValue[1];
     oldValue[2]=newValue[2];
+    
     foodTime=millis();
   }
-  else
+  if(foodMoveFast==true)
   {
-    if(foodTime==0 || millis()-foodTime>=15)
-    {
-      positionFoodHand=positionFoodHand-5;    
-      foodHand.write(positionFoodHand);
-      foodTime=millis();
-      if(positionFoodHand<80)
+      redEye();
+      foodHand.attach(FOOD_PIN);
+      for(int i=180;i>85;i=i-5)
       {
-        foodMoveFast=false;
-        foodTime=millis()+2000;//I put the hand in "offered position" after 2 seconds
+        foodHand.write(i);
+        delay(2);
       }
-    }
+      delay(1000);
+      speak("fun");
+      for(int i=85;i<180;i++)
+      {
+        foodHand.write(i);
+        delay(10);
+      }
+      foodMoveFast=false;
+      foodHand.detach();
+      foodTime=millis();
+      
+      oldValue[0]=analogRead(PIN_SENSOR_1);
+      oldValue[1]=analogRead(PIN_SENSOR_2);
+      oldValue[2]=analogRead(PIN_SENSOR_3);
+      helloTime=millis()+3000;
+      blueEye();
   }
-  if(foodMoveFast==false && positionFoodHand<130 && (foodTime==0 || millis()-foodTime>=20))
+ /* if(foodMoveFast==false && positionFoodHand<130 && (foodTime==0 || millis()-foodTime>=20))
   {
     positionFoodHand=positionFoodHand+5;
     foodTime=millis();
     foodHand.write(positionFoodHand);
-  }
+  }*/
 }
 
 //Robot say hi for 3 seconds when the body arduino said
@@ -135,13 +185,14 @@ void sayhi()
 {
   if(millis()-helloTime<3000 && millis()-helloInterval>20)
   {
-    Serial.print("Tempi=");
+    /*Serial.print("Tempi=");
   Serial.print(helloTime);
   Serial.print("-");
-  Serial.println(helloInterval);
+  Serial.println(helloInterval);*/
   if(!helloHand.attached())  
   {
     helloHand.attach(HELLO_PIN);
+    speak("hi");
     greenEye();
   }
   if(helloDirection==0)
@@ -192,15 +243,76 @@ void greenEye()
 //MANAGE ROBOT SPEAKING
 void speak(String s)
 {
-  Wire.beginTransmission(9); // transmit to device #9
   if(s=="hi")
   {
-    Wire.write("h");// sends 1 byte
+    //myDFPlayer.play(1);
   }
-  if(s=="offer")
+  if(s=="fun")
   {
-    Wire.write("o");// sends 1 byte
+    //myDFPlayer.play(2);  
   }
-  Wire.endTransmission();    // stop transmitting
+  speakTime=millis();
+}
+
+//MANAGE EYEBROW AND MUSTACHE
+void happyMustache()
+{
+  faceS1.attach(face1);
+  faceS2.attach(face2);
+
+  
+  
+  faceS1.detach();
+  faceS2.detach();
+}
+void normalMustache()
+{
+  faceS1.attach(face1);
+  faceS2.attach(face2);
+
+  
+  
+  faceS1.detach();
+  faceS2.detach(); 
+}
+void sadMustache()
+{
+  faceS1.attach(face1);
+  faceS2.attach(face2);
+
+  
+  
+  faceS1.detach();
+  faceS2.detach();
+}
+void happyEyeBrow()
+{
+  faceS1.attach(face1);
+  faceS2.attach(face2);
+
+  
+  
+  faceS1.detach();
+  faceS2.detach();
+}
+void normalEyeBrow()
+{
+  faceS1.attach(face1);
+  faceS2.attach(face2);
+
+  
+  
+  faceS1.detach();
+  faceS2.detach();
+}
+void sadEyeBrow()
+{
+  faceS1.attach(face1);
+  faceS2.attach(face2);
+
+  
+  
+  faceS1.detach();
+  faceS2.detach();
 }
 

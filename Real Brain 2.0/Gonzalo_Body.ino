@@ -4,7 +4,6 @@
  */
 #include <Servo.h>
 #include <NewPing.h>
-#include <Wire.h>
 
 #define MAX_DISTANCE 200 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 
@@ -35,7 +34,7 @@ long helloTime;
 
 void setup() {
   //BODY
-  Serial.begin(9600);
+  //Serial.begin(9600);
   bodyMotor.attach(BODY_PIN);
   bodyMotor.write(90);
   delay(500);
@@ -51,10 +50,10 @@ void setup() {
     distC=400;
   if(distR==0)
     distR=400;
-  //set up the communication 
-  Wire.begin();
   //Set up hello
   helloTime=0;
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW);
   delay(1000);
 }
 
@@ -62,7 +61,7 @@ void loop() {
   checkSonar();
   if(millis()-helloTime>=5000 && (distC>=50 && distC<=100))
   {
-    Serial.println("CIAO");
+    //Serial.println("CIAO");
     sayHello();
     helloTime=millis();
   }
@@ -86,7 +85,7 @@ void checkSonar()
     distR=400; 
   bodyMotor.attach(BODY_PIN);
   if(distR+10<distC && distR+10<distL){
-    for(int i=0;i<45;i++)
+    for(int i=0;i<60;i++)
     {
       if(bodyMotor.read()>30)
         bodyMotor.write(bodyMotor.read()-1);
@@ -96,7 +95,7 @@ void checkSonar()
     }
   }
   if(distL+10<distC && distL+10<distR){
-    for(int i=0;i<45;i++)
+    for(int i=0;i<60;i++)
     {
       if(bodyMotor.read()<130)
         bodyMotor.write(bodyMotor.read()+1);
@@ -106,14 +105,14 @@ void checkSonar()
     }
   }
   bodyMotor.detach();
-  Serial.print("Ping1: ");
-  Serial.print(distR ); // Send ping, get distance in cm and print result (0 = outside set distance range)
+  //Serial.print("Ping1: ");
+  //Serial.print(distR ); // Send ping, get distance in cm and print result (0 = outside set distance range)
   
-  Serial.print("Ping2: ");
-  Serial.print(distC ); // Send ping, get distance in cm and print result (0 = outside set distance range)
+  //Serial.print("Ping2: ");
+  //Serial.print(distC ); // Send ping, get distance in cm and print result (0 = outside set distance range)
   
-  Serial.print("Ping3: ");
-  Serial.println(distL ); // Send ping, get distance in cm and print result (0 = outside set distance range)
+  //Serial.print("Ping3: ");
+  //Serial.println(distL ); // Send ping, get distance in cm and print result (0 = outside set distance range)
 }
 
 void sayHello()
@@ -121,8 +120,8 @@ void sayHello()
   /*
    * Send to the secondary arduino the command to say hello
    */
-  Wire.beginTransmission(8); // transmit to device #8
-  Wire.write("h");
-  Wire.endTransmission();    // stop transmitting 
+  digitalWrite(2,HIGH);
+  delay(300);
+  digitalWrite(2,LOW);
 }
 
