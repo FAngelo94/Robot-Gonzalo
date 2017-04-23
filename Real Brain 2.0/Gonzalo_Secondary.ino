@@ -8,6 +8,9 @@
 #include <Servo.h>
 #include <DFRobotDFPlayerMini.h>7
 #include <SoftwareSerial.h>
+#include <Arduino.h>
+#include <SoftwareSerial.h>
+#include <DFRobotDFPlayerMini.h>
 
 //Variable to check if a person is near for more than 2/3 seconds
 int seePerson;
@@ -43,17 +46,17 @@ int helloDirection;
 #define RED 11
 
 //speak
-long speakTime;
+SoftwareSerial mySoftwareSerial(12, 13); // RX, TX
+DFRobotDFPlayerMini myDFPlayer;
 
 //face
 #define face1 13
 #define face2 12
 Servo faceS1, faceS2;
-
-//Music
-//SoftwareSerial mySoftwareSerial(10, 11); // RX, TX
-//DFRobotDFPlayerMini myDFPlayer;
-
+long mustacheTime;
+long mustacheDirection;
+long mustacheInterval;
+int mustachePosition;
 
 void setup() {
   //HAND WITH FOOD
@@ -78,50 +81,47 @@ void setup() {
   pinMode(GREEN, OUTPUT);  
   pinMode(BLU, OUTPUT);  
   pinMode(RED, OUTPUT);
-  //communication with slave set up
-  //setup eyes
   blueEye();
+  //Set up mustache
+  faceS1.attach(face1);
+  faceS2.attach(face2);
+  //faceS1.write();
+  //faceS2.write();
+  mustacheTime=-3000;
+  mustacheDirection=0;
+  mustacheInterval=0;
+  mustachePosition=90;
+  sadMustache();
   //Set up the DF Player
-  //mySoftwareSerial.begin(9600);
-  //myDFPlayer.volume(20);  //Set volume value. From 0 to 30
+  mySoftwareSerial.begin(9600);
+  myDFPlayer.volume(20);  //Set volume value. From 0 to 30
   delay(2000);
   helloHand.detach();
   foodHand.detach();
   helloTime=millis();
+  //Body Arduino send in pin 2 the signal when a person is detected in front of it
   pinMode(2, INPUT);
-  pinMode(3, OUTPUT);
-  pinMode(4, OUTPUT);
-  digitalWrite(3, LOW);
-  digitalWrite(4, LOW);
-  speakTime=0;
   //Serial.begin(9600);
 }
 
 void loop() {
-  sayhi();
-  requestEvent();
+  checkDistance();
   moveHandFast();
-  if(millis()-speakTime>=500)
-  {
-    digitalWrite(3, LOW);
-    digitalWrite(4, LOW);
-  }
+  sayhi();
+  laughMustache();
+  sadMustache();
 }
-//request to the slave to give the distance of central sonar
-void requestEvent(){
-    //Serial.print("Caratteri=");
-    //Serial.print(digitalRead(2));
+//Check if the signal of "near person" is activated or not
+void checkDistance(){
     if(digitalRead(2)==HIGH && millis()-helloTime>=3000)
     {
-      //Serial.print(c);
         helloTime=millis();
-        //Serial.println("ciao");
     }
-    //Serial.println("Hola chica");
-    //Serial.println();
 }
 
 //MOVE FAST THE HAND IF A PERSON TRY TO KEEP FOOD
+//When someone try to keep food Gonzalo move hand, say "ahahah" and move mustache to laugh for about 2 second,
+//and then his hand return in the original position
 void moveHandFast()
 {
   //Serial.println(foodMoveFast);
@@ -155,43 +155,39 @@ void moveHandFast()
         foodHand.write(i);
         delay(2);
       }
-      delay(1000);
-      speak("fun");
+    speak("fun");
+    mustacheTime=millis();
+      foodMoveFast=false;
+      foodHand.detach();
+      foodTime=millis();
+      oldValue[0]=analogRead(PIN_SENSOR_1);
+      oldValue[1]=analogRead(PIN_SENSOR_2);
+      oldValue[2]=analogRead(PIN_SENSOR_3);
+      helloTime=millis()+3000; //After move hand fast Gonzalo don't say hi for a while
+      blueEye();
+  }
+  if(foodMoveFast==false && foodHand.read()<=85 && millis()-helloTime>-1000 && millis()-helloTime<0)
+  {
+    foodHand.attach(FOOD_PIN);
       for(int i=85;i<180;i++)
       {
         foodHand.write(i);
         delay(10);
       }
-      foodMoveFast=false;
       foodHand.detach();
-      foodTime=millis();
-      
-      oldValue[0]=analogRead(PIN_SENSOR_1);
-      oldValue[1]=analogRead(PIN_SENSOR_2);
-      oldValue[2]=analogRead(PIN_SENSOR_3);
-      helloTime=millis()+3000;
-      blueEye();
+    normalMustache();
   }
- /* if(foodMoveFast==false && positionFoodHand<130 && (foodTime==0 || millis()-foodTime>=20))
-  {
-    positionFoodHand=positionFoodHand+5;
-    foodTime=millis();
-    foodHand.write(positionFoodHand);
-  }*/
 }
 
-//Robot say hi for 3 seconds when the body arduino said
+//Robot say hi for 3 seconds when the body arduino give the signal
 void sayhi()
 {
   if(millis()-helloTime<3000 && millis()-helloInterval>20)
   {
-    /*Serial.print("Tempi=");
-  Serial.print(helloTime);
-  Serial.print("-");
-  Serial.println(helloInterval);*/
   if(!helloHand.attached())  
   {
     helloHand.attach(HELLO_PIN);
+  normalMustache();
     speak("hi");
     greenEye();
   }
@@ -245,74 +241,72 @@ void speak(String s)
 {
   if(s=="hi")
   {
-    //myDFPlayer.play(1);
+    myDFPlayer.play(1);
   }
   if(s=="fun")
   {
-    //myDFPlayer.play(2);  
+    myDFPlayer.play(2);  
   }
-  speakTime=millis();
 }
 
 //MANAGE EYEBROW AND MUSTACHE
-void happyMustache()
-{
-  faceS1.attach(face1);
-  faceS2.attach(face2);
-
-  
-  
-  faceS1.detach();
-  faceS2.detach();
-}
 void normalMustache()
 {
+
   faceS1.attach(face1);
   faceS2.attach(face2);
 
-  
-  
+  //faceS1.write();
+  //faceS2.write();
+  delay(50);
   faceS1.detach();
   faceS2.detach(); 
 }
+//default position when there isn't anyone
+//Gonzalo become sad when it doesn't interact with anyone for a while
 void sadMustache()
 {
-  faceS1.attach(face1);
-  faceS2.attach(face2);
+  if(millis()-helloTime>10000 && millis()-foodTime>1000)
+  {
+    faceS1.attach(face1);
+    faceS2.attach(face2);
 
-  
-  
-  faceS1.detach();
-  faceS2.detach();
+    //faceS1.write();
+    //faceS2.write();
+    delay(50);
+    faceS1.detach();
+    faceS2.detach(); 
+  }
 }
-void happyEyeBrow()
+void laughMustache()
 {
-  faceS1.attach(face1);
-  faceS2.attach(face2);
-
-  
-  
-  faceS1.detach();
-  faceS2.detach();
+  if(millis()-mustacheTime<2000 && millis()-mustacheInterval>15)
+  {
+    if(!faceS1.attached())
+      faceS1.attach(face1);
+    if(!faceS2.attached())
+      faceS2.attach(face2);
+    if(mustacheDirection==0)
+    {
+      mustachePosition=mustachePosition+2;
+      if(mustachePosition>100)
+        mustacheDirection=1;
+    }
+    else
+    {
+      mustachePosition=mustachePosition-2;
+      if(mustachePosition<80)
+        mustacheDirection=0;
+    }
+    //faceS1.write();
+    //faceS2.write();
+    mustacheInterval=millis();
+  }
+  if(millis()-mustacheTime>2000)
+  {
+    if(faceS1.attached())
+      faceS1.detach();
+    if(faceS2.attached())
+      faceS2.detach();
+  }
 }
-void normalEyeBrow()
-{
-  faceS1.attach(face1);
-  faceS2.attach(face2);
-
-  
-  
-  faceS1.detach();
-  faceS2.detach();
-}
-void sadEyeBrow()
-{
-  faceS1.attach(face1);
-  faceS2.attach(face2);
-
-  
-  
-  faceS1.detach();
-  faceS2.detach();
-}
-
