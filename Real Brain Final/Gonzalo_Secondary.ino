@@ -20,6 +20,7 @@
 Servo foodHand;
 int positionFoodHand;
 long foodTime;
+long rechargeFoodTime;//when food hand moved then it doesn't work for a while
 boolean foodMoveFast;
 int oldValue[3];
 int newValue[3];
@@ -58,6 +59,7 @@ void setup() {
   foodHand.write(positionFoodHand); 
   foodMoveFast=false;
   foodTime=0;
+  rechargeFoodTime=0;
   oldValue[0]=analogRead(PIN_SENSOR_1);
   oldValue[1]=analogRead(PIN_SENSOR_2);
   oldValue[2]=analogRead(PIN_SENSOR_3);
@@ -125,7 +127,7 @@ void checkDistance(){
 void moveHandFast()
 {
   //Serial.println(foodMoveFast);
-  if(foodMoveFast==false && millis()-foodTime>=1000)
+  if(foodMoveFast==false && millis()-foodTime>=1000 && millis()-rechargeFoodTime>0)
   {
     newValue[0]=analogRead(PIN_SENSOR_1);
     newValue[1]=analogRead(PIN_SENSOR_2);
@@ -163,7 +165,8 @@ void moveHandFast()
       oldValue[0]=analogRead(PIN_SENSOR_1);
       oldValue[1]=analogRead(PIN_SENSOR_2);
       oldValue[2]=analogRead(PIN_SENSOR_3);
-      helloTime=millis()+3000; //After move hand fast Gonzalo don't say hi for a while
+      helloTime=millis()+4000; //After move hand fast Gonzalo don't say hi for a while
+      rechargeFoodTime=millis()+5000;//After move hand fast Gonzalo don't move the food hand again for a while
       blueEye();
   }
   if(foodMoveFast==false && foodHand.read()<=120 && millis()-helloTime>-1000 && millis()-helloTime<0)
