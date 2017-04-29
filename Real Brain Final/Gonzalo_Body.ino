@@ -62,7 +62,7 @@ void setup() {
 
 void loop() {
   checkSonar();
-  if(millis()-helloTime>=8000 && (distC>=50 && distC<100))
+  if(millis()-helloTime>=4000 && (distC<100))
   {
     //Serial.println("CIAO");
     sayHello();

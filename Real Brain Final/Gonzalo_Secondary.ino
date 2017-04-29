@@ -34,6 +34,7 @@ long helloTime;
 long helloInterval;
 int helloDirection;
 long rechargeHi;
+boolean enter;
 
 //eyes
 #define GREEN 9
@@ -74,6 +75,7 @@ void setup() {
   helloInterval=0;
   helloDirection=0;
   rechargeHi=0;
+  enter=false;
   //eye setup
   pinMode(GREEN, OUTPUT);  
   pinMode(BLU, OUTPUT);  
@@ -189,7 +191,7 @@ void moveHandFast()
 void sayhi()
 { 
   long diff=millis()-rechargeHi;
-  if(millis()-helloTime<3000 && millis()-helloInterval>20 && helloTime!=0 && rechargeHi>0)
+  if(millis()-helloTime<3000 && millis()-helloInterval>20 && helloTime!=0 && diff>0 && enter==false)
   {
     //Serial.println("sto salutando");
   if(!helloHand.attached() || sleep==true)  
@@ -222,7 +224,16 @@ void sayhi()
   if(millis()-helloTime>=3000 && helloHand.attached() && sleep==false)
   {//detach the servo when Gonzalo not say hello
     helloHand.detach();
+    rechargeHi=millis()+8000;
     blueEye();
+    enter=true;
+  }
+  if(millis()-helloTime<3000 && millis()-helloInterval>20 && helloTime!=0 && diff>0 && enter==true)
+  {
+    speak("enter");
+    helloTime=millis()-3000;
+    rechargeHi=millis()+5000;
+    enter=false;
   }
 }
 
@@ -248,8 +259,10 @@ void greenEye()
 //MANAGE ROBOT SPEAKING
 void speak(String s)
 {
+  myDFPlayer.volume(10);
   if(s=="hi")
   {
+    
     myDFPlayer.play(2);
   }
   if(s=="fun")
@@ -258,7 +271,12 @@ void speak(String s)
   }
   if(s=="song")
   {
+    myDFPlayer.volume(20);
     myDFPlayer.play(3); 
+  }
+  if(s=="enter")
+  {
+    myDFPlayer.play(4); 
   }
 }
 
