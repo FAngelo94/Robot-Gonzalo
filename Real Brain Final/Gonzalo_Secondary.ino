@@ -23,7 +23,8 @@ long foodTime;
 long rechargeFoodTime;//when food hand moved then it doesn't work for a while
 boolean foodMoveFast;
 boolean resetFoodHand;
-int oldValue;
+//boolean foodMoveFastActive;
+int oldValue[10];
 int newValue;
 
 //HELLO HAND
@@ -66,7 +67,11 @@ void setup() {
   resetFoodHand=false;
   foodTime=0;
   rechargeFoodTime=0;
-  oldValue=analogRead(PIN_SENSOR_1);
+  for(int i=0;i<10;i++)
+  {
+    oldValue[i]=analogRead(PIN_SENSOR_1);
+    delay(50);
+  }
   //HELLO HAND
   positionHelloHand=90;
   helloHand.attach(HELLO_PIN);
@@ -106,7 +111,7 @@ void setup() {
   if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
     while(true);
   }
-  myDFPlayer.volume(5);  //Set volume value. From 0 to 304
+  myDFPlayer.volume(10);  //Set volume value. From 0 to 304
   sleep=false;
 }
 
@@ -135,25 +140,39 @@ void moveHandFast()
   
   //Serial.println(foodMoveFast);
   long diff=millis()-rechargeFoodTime;
-  if(foodMoveFast==false && millis()-foodTime>=100 && diff>0)
+  if(foodMoveFast==false && millis()-foodTime>=200 && diff>0)
   {
+    double maxL=0;
+    for(int i=0;i<10;i++)
+      if(oldValue[i]>maxL)
+        maxL=oldValue[i];
+    double diff=((double)newValue-(double)maxL)/((double)maxL)*100;
     newValue=analogRead(PIN_SENSOR_1);
+    
     /*Serial.print("FOTO=");
     Serial.print(newValue);
     Serial.print(" - ");
-    Serial.println(oldValue);
-    int diff=newValue-oldValue;
+    Serial.println(maxL);
     Serial.print("DIF=");
     Serial.println(diff);*/
-    if(newValue-oldValue>8)
+    
+    if(diff<-15)
     {//A person is trying to take food
       foodMoveFast=true;
     }
-    oldValue=newValue;
+    else
+    {
+      for(int i=0;i<9;i++)
+        oldValue[i]=oldValue[i+1];
+      oldValue[9]=newValue;
+    }
     foodTime=millis();
   }
   if(foodMoveFast==true)
   {
+      if(helloHand.attached())
+        helloHand.detach();
+       
       rechargeHi=millis()+5000; //After move hand fast Gonzalo don't say hi for a while
       redEye();
       foodHand.attach(FOOD_PIN);
@@ -168,12 +187,16 @@ void moveHandFast()
       resetFoodHand=true;
       foodHand.detach();
       foodTime=millis();
-      oldValue=analogRead(PIN_SENSOR_1);
       rechargeFoodTime=millis()+10000;//After move hand fast Gonzalo don't move the food hand again for a while
       
   }
   if(resetFoodHand==true)
   {
+    for(int i=0;i<10;i++)
+    {
+      oldValue[i]=analogRead(PIN_SENSOR_1);
+      delay(20);
+    }
     foodHand.attach(FOOD_PIN);
       for(int i=120;i<170;i++)
       {
@@ -191,20 +214,20 @@ void moveHandFast()
 void sayhi()
 { 
   long diff=millis()-rechargeHi;
-  if(millis()-helloTime<3000 && millis()-helloInterval>20 && helloTime!=0 && diff>0 && enter==false)
+  if(millis()-helloTime<3000 && millis()-helloInterval>10 && helloTime!=0 && diff>0 && enter==false)
   {
     //Serial.println("sto salutando");
   if(!helloHand.attached() || sleep==true)  
   {
     if(!helloHand.attached()) 
       helloHand.attach(HELLO_PIN);
-    normalMustache();
+    happyMustache();
     speak("hi");
     greenEye();
   }
   if(helloDirection==0)
     {
-      positionHelloHand=positionHelloHand+2;
+      positionHelloHand=positionHelloHand+4;
       if(positionHelloHand>=110)
       {
         helloDirection=1;
@@ -212,7 +235,7 @@ void sayhi()
     }
     else
     {
-      positionHelloHand=positionHelloHand-2;
+      positionHelloHand=positionHelloHand-4;
       if(positionHelloHand<=70)
       {
         helloDirection=0;
@@ -223,13 +246,18 @@ void sayhi()
   }
   if(millis()-helloTime>=3000 && helloHand.attached() && sleep==false)
   {//detach the servo when Gonzalo not say hello
-    helloHand.detach();
+    normalMustache();
+    if(helloHand.attached())
+      helloHand.detach();
     rechargeHi=millis()+8000;
     blueEye();
     enter=true;
   }
   if(millis()-helloTime<3000 && millis()-helloInterval>20 && helloTime!=0 && diff>0 && enter==true)
   {
+    if(helloHand.attached())
+      helloHand.detach();
+      
     speak("enter");
     helloTime=millis()-3000;
     rechargeHi=millis()+5000;
@@ -259,22 +287,19 @@ void greenEye()
 //MANAGE ROBOT SPEAKING
 void speak(String s)
 {
-  myDFPlayer.volume(10);
-  if(s=="hi")
+  if(s=="enter")
   {
-    
     myDFPlayer.play(2);
-  }
-  if(s=="fun")
-  {
-    myDFPlayer.play(1);  
   }
   if(s=="song")
   {
-    myDFPlayer.volume(20);
+    myDFPlayer.play(1);  
+  }
+  if(s=="hi")
+  {
     myDFPlayer.play(3); 
   }
-  if(s=="enter")
+  if(s=="fun")
   {
     myDFPlayer.play(4); 
   }
@@ -291,6 +316,22 @@ void normalMustache()
   eyeBrown.write(90);
   mustache.write(90);
   delay(50);
+  
+  eyeBrown.detach();
+  mustache.detach(); 
+}
+
+void happyMustache()
+{
+  if(!eyeBrown.attached())
+    eyeBrown.attach(face1);
+  if(!mustache.attached())
+    mustache.attach(face2);
+
+  eyeBrown.write(60);
+  mustache.write(120);
+  delay(50);
+  
   eyeBrown.detach();
   mustache.detach(); 
 }
@@ -329,7 +370,7 @@ void sadMustache()
     if(!helloHand.attached())  
       helloHand.attach(HELLO_PIN);
     helloHand.write(positionHelloHand);
-    delay(20);
+    delay(10);
   }
 }
 void laughMustache()
@@ -337,22 +378,23 @@ void laughMustache()
   if(millis()-mustacheTime<2000 && millis()-mustacheInterval>15)
   {
     if(!eyeBrown.attached())
-  {
+    {
       eyeBrown.attach(face1);
-    eyeBrown.write(120);
-  }
+      delay(10);
+      eyeBrown.write(120);
+    }
     if(!mustache.attached())
       mustache.attach(face2);
     if(mustacheDirection==0)
     {
       mustachePosition=mustachePosition+2;
-      if(mustachePosition>100)
+      if(mustachePosition>110)
         mustacheDirection=1;
     }
     else
     {
       mustachePosition=mustachePosition-2;
-      if(mustachePosition<80)
+      if(mustachePosition<70)
         mustacheDirection=0;
     }
     mustache.write(mustachePosition);
