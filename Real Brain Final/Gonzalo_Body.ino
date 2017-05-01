@@ -5,7 +5,7 @@
 #include <Servo.h>
 #include <NewPing.h>
 
-#define MAX_DISTANCE 180 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+#define MAX_DISTANCE 400 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 
 #define TRIGGER_PIN1  12  // Arduino pin tied to trigger pin on the ultrasonic sensor.
 #define ECHO_PIN1     11  // Arduino pin tied to echo pin on the ultrasonic sensor.
@@ -23,7 +23,7 @@ NewPing center(TRIGGER_PIN2, ECHO_PIN2, MAX_DISTANCE); // NewPing setup of pins 
 //Left
 NewPing left(TRIGGER_PIN3, ECHO_PIN3, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
 //distance of every sonar
-int distR, distL, distC;
+int distR[3], distL[3], distC[3];
 double sonarTime;
 //Servo for the rotation and its position
 #define BODY_PIN 6
@@ -32,39 +32,47 @@ Servo bodyMotor;
 //Variable to manage Hello
 long helloTime;
 
+int r,c,l;
+static int MAX=3;
+
 void setup() {
   //BODY
-  //Serial.begin(9600);
+  Serial.begin(9600);
   bodyMotor.attach(BODY_PIN);
   bodyMotor.write(90);
   delay(500);
   bodyMotor.detach();
-  distR=right.ping_median();
-  distR=right.convert_cm(distR);
+  for(int i=0;i<MAX;i++)
+  {
+    distR[i]=right.ping_median();
+    distR[i]=right.convert_cm(distR[i]);
+  }
   delay(30);
-  distC=center.ping_median();
-  distC=right.convert_cm(distC);
+  for(int i=0;i<MAX;i++)
+  {
+    distC[i]=center.ping_median();
+    distC[i]=center.convert_cm(distC[i]);
+  }
   delay(30); 
-  distL=left.ping_median(); 
-  distL=right.convert_cm(distL);
-  if(distL==0)
-    distL=400;
-  if(distC==0)
-    distC=400;
-  if(distR==0)
-    distR=400;
+  for(int i=0;i<MAX;i++)
+  {
+    distL[i]=left.ping_median(); 
+    distL[i]=left.convert_cm(distL[i]);
+  }
   //Set up hello
   helloTime=0;
+  c=400;
   pinMode(2, OUTPUT);
   digitalWrite(2, LOW);
   delay(1000);
 }
-
 void loop() {
   checkSonar();
-  if(millis()-helloTime>=4000 && (distC<100))
+  /*Serial.print("CCCCCCC=");
+  Serial.println(c);*/
+  if(millis()-helloTime>=4000 && (c<170 && c!=0))
   {
-    //Serial.println("CIAO");
+    Serial.println("CIAO");
     sayHello();
     helloTime=millis();
   }
@@ -73,40 +81,70 @@ void loop() {
 //MANAGE SONAR AND ROTATION OF ROBOT
 void checkSonar()
 {
-  distR=right.ping_median(5);
-  distR=right.convert_cm(distR);
-  delay(30);
-  distC=center.ping_median(5);
-  distC=right.convert_cm(distC);
-  delay(30); 
-  distL=left.ping_median(5); 
-  distL=right.convert_cm(distL);
-  delay(30);
-  if(distL==0)
-    distL=400;
-  if(distC==0)
-    distC=400;
-  if(distR==0)
-    distR=400;
-    
-  if(distC<30)//if there is someone in front of him he doesn't do useless movement
-    return; 
-  /*Serial.print("R=");
-  Serial.print(distR);
+  for(int i=0;i<MAX;i++)
+    distR[i]=distR[i+1];
+  distR[MAX-1]=right.ping_median(5);
+  distR[MAX-1]=right.convert_cm(distR[MAX-1]);
+  //delay(30);
+  for(int i=0;i<MAX;i++)
+    distC[i]=distC[i+1];
+  distC[MAX-1]=center.ping_median(5);
+  distC[MAX-1]=center.convert_cm(distC[MAX-1]);
+  //delay(30);
+  for(int i=0;i<MAX;i++)
+    distL[i]=distL[i+1]; 
+  distL[MAX-1]=left.ping_median(5); 
+  distL[MAX-1]=left.convert_cm(distL[MAX-1]);
+  Serial.print("VR=");
+  Serial.print(distR[MAX-1]);
+  Serial.print(" - ");
+  
+  Serial.print("VC=");
+  Serial.print(distC[MAX-1]);
+  Serial.print(" - ");
+  
+  Serial.print("VL=");
+  Serial.println(distL[MAX-1]);
+  //delay(30);
+  r=distR[MAX-1],c=distC[MAX-1],l=distL[MAX-1];
+  if(distR[MAX-1]==0 || distC[MAX-1]==0 || distL[MAX-1]==0)
+  {
+    for(int i=0;i<MAX;i++)
+    {
+      if(distR[i]!=0)
+        r=distR[i];
+      if(distC[i]!=0)
+        c=distC[i];
+      if(distL[i]!=0)
+        l=distL[i];
+    }
+  }
+  Serial.print("R=");
+  Serial.print(r);
   Serial.print(" - ");
   
   Serial.print("C=");
-  Serial.print(distC);
+  Serial.print(c);
   Serial.print(" - ");
   
   Serial.print("L=");
-  Serial.println(distL);*/
+  Serial.println(l);
+  
+  if(r==0)
+    r=400;
+  if(c==0)
+    c=400;
+  if(l==0)
+    l=400;
+  if(c<20)//if there is someone in front of him he doesn't do useless movement
+    return; 
+  
   bodyMotor.attach(BODY_PIN);
-  if(distR+30<distC && distR+30<distL){
+  if(r+20<c && r+20<l){
     int angolo=60;
-    if(distR<120)
+    if(r<120)
       angolo=40;
-    if(distR<100)
+    if(r<100)
       angolo=30;
     for(int i=0;i<angolo;i++)
     {
@@ -118,11 +156,11 @@ void checkSonar()
     }
     
   }
-  if(distL+30<distC && distL+30<distR){
+  if(l+20<c && l+20<r){
     int angolo=60;
-    if(distL<120)
+    if(l<120)
       angolo=40;
-    if(distL<100)
+    if(l<100)
       angolo=30;
     for(int i=0;i<angolo;i++)
     {

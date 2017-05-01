@@ -26,6 +26,7 @@ boolean resetFoodHand;
 //boolean foodMoveFastActive;
 int oldValue[10];
 int newValue;
+boolean activeFoodHand;
 
 //HELLO HAND
 #define HELLO_PIN 6
@@ -67,6 +68,7 @@ void setup() {
   resetFoodHand=false;
   foodTime=0;
   rechargeFoodTime=0;
+  activeFoodHand=false;
   for(int i=0;i<10;i++)
   {
     oldValue[i]=analogRead(PIN_SENSOR_1);
@@ -129,6 +131,7 @@ void checkDistance(){
     {
       //Serial.println("CIAO");
         helloTime=millis();
+        activeFoodHand=true;
     }
 }
 
@@ -156,9 +159,11 @@ void moveHandFast()
     Serial.print("DIF=");
     Serial.println(diff);*/
     
-    if(diff<-15)
+    if(diff<-15 && activeFoodHand==true)
     {//A person is trying to take food
       foodMoveFast=true;
+      activeFoodHand=false;
+      redEye();
     }
     else
     {
@@ -170,27 +175,27 @@ void moveHandFast()
   }
   if(foodMoveFast==true)
   {
+      
       if(helloHand.attached())
         helloHand.detach();
        
       rechargeHi=millis()+5000; //After move hand fast Gonzalo don't say hi for a while
-      redEye();
       foodHand.attach(FOOD_PIN);
-      for(int i=170;i>120;i=i-5)
+      for(int i=170;i>120;i=i-3)
       {
         foodHand.write(i);
-        delay(10);
+        delay(15);
       }
-    speak("fun");
-    mustacheTime=millis();
+      foodHand.detach();
+      speak("fun");
+      mustacheTime=millis();
       foodMoveFast=false;
       resetFoodHand=true;
-      foodHand.detach();
       foodTime=millis();
       rechargeFoodTime=millis()+10000;//After move hand fast Gonzalo don't move the food hand again for a while
       
   }
-  if(resetFoodHand==true)
+  if(resetFoodHand==true && rechargeFoodTime-millis()<5000)
   {
     for(int i=0;i<10;i++)
     {
@@ -227,7 +232,7 @@ void sayhi()
   }
   if(helloDirection==0)
     {
-      positionHelloHand=positionHelloHand+4;
+      positionHelloHand=positionHelloHand+2;
       if(positionHelloHand>=110)
       {
         helloDirection=1;
@@ -235,7 +240,7 @@ void sayhi()
     }
     else
     {
-      positionHelloHand=positionHelloHand-4;
+      positionHelloHand=positionHelloHand-2;
       if(positionHelloHand<=70)
       {
         helloDirection=0;
@@ -246,18 +251,21 @@ void sayhi()
   }
   if(millis()-helloTime>=3000 && helloHand.attached() && sleep==false)
   {//detach the servo when Gonzalo not say hello
-    normalMustache();
+    
     if(helloHand.attached())
       helloHand.detach();
     rechargeHi=millis()+8000;
-    blueEye();
     enter=true;
+  }
+  if(millis()-helloTime>=5000 && sleep==false)
+  {//detach the servo when Gonzalo not say hello
+    blueEye();
   }
   if(millis()-helloTime<3000 && millis()-helloInterval>20 && helloTime!=0 && diff>0 && enter==true)
   {
     if(helloHand.attached())
       helloHand.detach();
-      
+      normalMustache();
     speak("enter");
     helloTime=millis()-3000;
     rechargeHi=millis()+5000;
@@ -315,7 +323,7 @@ void normalMustache()
 
   eyeBrown.write(90);
   mustache.write(90);
-  delay(50);
+  delay(200);
   
   eyeBrown.detach();
   mustache.detach(); 
@@ -328,9 +336,9 @@ void happyMustache()
   if(!mustache.attached())
     mustache.attach(face2);
 
-  eyeBrown.write(60);
-  mustache.write(120);
-  delay(50);
+  eyeBrown.write(20);
+  mustache.write(150);
+  delay(200);
   
   eyeBrown.detach();
   mustache.detach(); 
@@ -345,15 +353,31 @@ void sadMustache()
     sleep=false;
   if(dist1>10000 && dist2>0)
   {
+    if(!mustache.attached())
+      mustache.attach(face2);
+    if(mustacheDirection==0)
+    {
+      mustachePosition=mustachePosition+1;
+      if(mustachePosition>120)
+        mustacheDirection=1;
+    }
+    else
+    {
+      mustachePosition=mustachePosition-1;
+      if(mustachePosition<60)
+        mustacheDirection=0;
+    }
+    mustache.write(mustachePosition);
     if(!helloHand.attached())  
     {
       helloHand.attach(HELLO_PIN);
+      normalMustache();
       speak("song");
       sleep=true;
     }
     if(helloDirection==0)
     {
-      positionHelloHand=positionHelloHand+2;
+      positionHelloHand=positionHelloHand+1;
       if(positionHelloHand>=110)
       {
         helloDirection=1;
@@ -361,7 +385,7 @@ void sadMustache()
     }
     else
     {
-      positionHelloHand=positionHelloHand-2;
+      positionHelloHand=positionHelloHand-1;
       if(positionHelloHand<=70)
       {
         helloDirection=0;
@@ -375,26 +399,26 @@ void sadMustache()
 }
 void laughMustache()
 {
-  if(millis()-mustacheTime<2000 && millis()-mustacheInterval>15)
+  if(millis()-mustacheTime<5000 && millis()-mustacheInterval>10)
   {
     if(!eyeBrown.attached())
     {
       eyeBrown.attach(face1);
       delay(10);
-      eyeBrown.write(120);
+      eyeBrown.write(160);
     }
     if(!mustache.attached())
       mustache.attach(face2);
     if(mustacheDirection==0)
     {
-      mustachePosition=mustachePosition+2;
-      if(mustachePosition>110)
+      mustachePosition=mustachePosition+4;
+      if(mustachePosition>120)
         mustacheDirection=1;
     }
     else
     {
-      mustachePosition=mustachePosition-2;
-      if(mustachePosition<70)
+      mustachePosition=mustachePosition-4;
+      if(mustachePosition<60)
         mustacheDirection=0;
     }
     mustache.write(mustachePosition);
@@ -405,10 +429,9 @@ void laughMustache()
     if(eyeBrown.attached())
       eyeBrown.detach();
   }
-  if(millis()-mustacheTime>2000)
+  if(millis()-mustacheTime>5000)
   {
     if(mustache.attached())
       mustache.detach();
-    normalMustache();
   }
 }
