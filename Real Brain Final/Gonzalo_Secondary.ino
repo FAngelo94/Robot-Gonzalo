@@ -46,6 +46,7 @@ boolean enter;
 //speak
 SoftwareSerial mySoftwareSerial(12, 13); // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
+int enterCount;
 
 //face
 #define face1 5
@@ -108,6 +109,7 @@ void setup() {
   pinMode(2, INPUT);
   //Set up the DF Player
   mySoftwareSerial.begin(9600);
+  enterCount=0;
   //Serial.begin(115200);
   
   if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
@@ -297,7 +299,15 @@ void speak(String s)
 {
   if(s=="enter")
   {
-    myDFPlayer.play(2);
+    if(enterCount==0)
+      myDFPlayer.play(2);
+    if(enterCount==1)
+      myDFPlayer.play(5);
+    if(enterCount==2)
+      myDFPlayer.play(6);
+    enterCount++;
+    if(enterCount>2)
+    enterCount=0;
   }
   if(s=="song")
   {
